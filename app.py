@@ -116,6 +116,17 @@ st.markdown("""
         margin-bottom: 12px;
     }
     
+    .vehicle-card {
+        background: #18181b;
+        border: 1px solid #27272a;
+        border-radius: 12px;
+        padding: 16px 20px;
+        margin-bottom: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+    
     .stButton > button {
         background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
         border: none;
@@ -178,18 +189,53 @@ def load_logs(): return load_json(LOGS_FILE, [])
 def save_logs(logs): save_json(LOGS_FILE, logs)
 
 # ============================================
-# MAINTENANCE TEMPLATES - WITH MILES/DAYS
+# TYPE-SPECIFIC CONFIGURATIONS
+# ============================================
+TYPE_CONFIG = {
+    "vehicle": {
+        "label": "Vehicle",
+        "icon": "🚗",
+        "name_placeholder": "e.g., 2020 Honda Accord, My Tesla",
+        "brand_placeholder": "e.g., Honda, Toyota, Tesla",
+        "model_placeholder": "e.g., Accord, Camry, Model 3",
+        "notes_placeholder": "VIN, license plate, purchase date...",
+        "supports_mileage": True,
+    },
+    "home": {
+        "label": "Home",
+        "icon": "🏠",
+        "name_placeholder": "e.g., Main House, Lake Cabin, Rental Property",
+        "brand_placeholder": "e.g., Builder name (optional)",
+        "model_placeholder": "e.g., Year built (optional)",
+        "notes_placeholder": "Address, square footage, special systems...",
+        "supports_mileage": False,
+    },
+    "appliance": {
+        "label": "Appliance",
+        "icon": "🔌",
+        "name_placeholder": "e.g., Kitchen Refrigerator, Washer, HVAC Unit",
+        "brand_placeholder": "e.g., Samsung, LG, Carrier",
+        "model_placeholder": "e.g., RF28R7351SR, WM4500HBA",
+        "notes_placeholder": "Serial number, warranty info, purchase date...",
+        "supports_mileage": False,
+    },
+}
+
+# ============================================
+# MAINTENANCE TEMPLATES
 # ============================================
 TEMPLATES = {
     "vehicle": [
-        {"name": "Oil Change", "interval": 90, "unit": "days", "alt_interval": 3000, "alt_unit": "miles", "priority": "high"},
-        {"name": "Tire Rotation", "interval": 180, "unit": "days", "alt_interval": 5000, "alt_unit": "miles", "priority": "medium"},
-        {"name": "Air Filter Replacement", "interval": 365, "unit": "days", "alt_interval": 15000, "alt_unit": "miles", "priority": "low"},
-        {"name": "Brake Inspection", "interval": 365, "unit": "days", "alt_interval": 12000, "alt_unit": "miles", "priority": "high"},
-        {"name": "Transmission Fluid", "interval": 730, "unit": "days", "alt_interval": 30000, "alt_unit": "miles", "priority": "medium"},
-        {"name": "Coolant Flush", "interval": 730, "unit": "days", "alt_interval": 30000, "alt_unit": "miles", "priority": "medium"},
-        {"name": "Battery Check", "interval": 365, "unit": "days", "alt_interval": None, "alt_unit": None, "priority": "medium"},
-        {"name": "Wiper Blades", "interval": 180, "unit": "days", "alt_interval": None, "alt_unit": None, "priority": "low"},
+        {"name": "Oil Change", "interval": 5000, "unit": "miles", "priority": "high"},
+        {"name": "Tire Rotation", "interval": 5000, "unit": "miles", "priority": "medium"},
+        {"name": "Air Filter", "interval": 15000, "unit": "miles", "priority": "low"},
+        {"name": "Brake Inspection", "interval": 12000, "unit": "miles", "priority": "high"},
+        {"name": "Transmission Fluid", "interval": 30000, "unit": "miles", "priority": "medium"},
+        {"name": "Coolant Flush", "interval": 30000, "unit": "miles", "priority": "medium"},
+        {"name": "Battery Check", "interval": 365, "unit": "days", "priority": "medium"},
+        {"name": "Wiper Blades", "interval": 180, "unit": "days", "priority": "low"},
+        {"name": "Registration Renewal", "interval": 365, "unit": "days", "priority": "high"},
+        {"name": "Insurance Renewal", "interval": 180, "unit": "days", "priority": "high"},
     ],
     "home": [
         {"name": "HVAC Filter Change", "interval": 90, "unit": "days", "priority": "high"},
@@ -199,11 +245,13 @@ TEMPLATES = {
         {"name": "Water Heater Flush", "interval": 365, "unit": "days", "priority": "medium"},
         {"name": "Dryer Vent Cleaning", "interval": 365, "unit": "days", "priority": "high"},
         {"name": "Pest Control", "interval": 90, "unit": "days", "priority": "medium"},
+        {"name": "Lawn Care", "interval": 14, "unit": "days", "priority": "low"},
     ],
     "appliance": [
         {"name": "Deep Clean", "interval": 90, "unit": "days", "priority": "low"},
         {"name": "Filter Replacement", "interval": 180, "unit": "days", "priority": "medium"},
         {"name": "Maintenance Check", "interval": 365, "unit": "days", "priority": "medium"},
+        {"name": "Warranty Expiration", "interval": 365, "unit": "days", "priority": "high"},
     ],
 }
 
@@ -214,7 +262,7 @@ def generate_id():
     return str(uuid.uuid4())[:8]
 
 def days_until_due(task):
-    """Calculate days until due. For mileage-based tasks, this is an estimate."""
+    """Calculate days until due for time-based tasks."""
     try:
         due_date = task.get('next_due_date')
         if due_date:
@@ -224,13 +272,8 @@ def days_until_due(task):
     except:
         return 999
 
-def get_status_class(days):
-    if days < 0: return "overdue"
-    elif days <= 7: return "soon"
-    return "ok"
-
 def get_status_text(task):
-    """Get status text based on task unit type."""
+    """Get human-readable status text."""
     unit = task.get('unit', 'days')
     
     if unit == 'miles':
@@ -240,9 +283,9 @@ def get_status_text(task):
         if remaining <= 0:
             return f"{abs(remaining):,} miles overdue"
         elif remaining <= 500:
-            return f"{remaining:,} miles remaining"
+            return f"{remaining:,} miles left"
         else:
-            return f"{remaining:,} miles until due"
+            return f"{remaining:,} miles to go"
     else:
         days = days_until_due(task)
         if days < 0:
@@ -254,12 +297,13 @@ def get_status_text(task):
         elif days <= 7:
             return f"Due in {days} days"
         elif days <= 30:
-            return f"Due in {days} days"
+            weeks = days // 7
+            return f"Due in {weeks} week{'s' if weeks > 1 else ''}"
         else:
             return f"Due in {days} days"
 
 def is_overdue(task):
-    """Check if task is overdue based on its unit type."""
+    """Check if task is overdue."""
     unit = task.get('unit', 'days')
     if unit == 'miles':
         current = task.get('current_mileage', 0)
@@ -269,7 +313,7 @@ def is_overdue(task):
         return days_until_due(task) < 0
 
 def is_due_soon(task):
-    """Check if task is due soon."""
+    """Check if task is due soon (within threshold)."""
     unit = task.get('unit', 'days')
     if unit == 'miles':
         current = task.get('current_mileage', 0)
@@ -280,20 +324,18 @@ def is_due_soon(task):
         days = days_until_due(task)
         return 0 <= days <= 7
 
-def calculate_next_due(last_date_str, interval_days):
-    """Calculate next due date from last completed date."""
-    if last_date_str:
-        last = datetime.fromisoformat(last_date_str)
-        return (last + timedelta(days=interval_days)).isoformat()
-    return (datetime.now() + timedelta(days=interval_days)).isoformat()
-
 def complete_task(task_id):
+    """Mark a task as complete and schedule next occurrence."""
     tasks = load_tasks()
     logs = load_logs()
+    items = load_items()
     
     for task in tasks:
         if task['id'] == task_id:
             now = datetime.now()
+            
+            # Find the item to get current mileage
+            item = next((i for i in items if i['id'] == task['item_id']), None)
             
             # Log completion
             log = {
@@ -301,17 +343,19 @@ def complete_task(task_id):
                 "task_id": task_id,
                 "item_id": task['item_id'],
                 "completed_at": now.isoformat(),
-                "mileage": task.get('current_mileage')
             }
+            if task.get('unit') == 'miles' and item:
+                log['mileage'] = item.get('current_mileage', 0)
             logs.append(log)
             save_logs(logs)
             
-            # Update task
+            # Update task for next occurrence
             task['last_completed'] = now.isoformat()
             
-            if task.get('unit') == 'miles':
-                current = task.get('current_mileage', 0)
+            if task.get('unit') == 'miles' and item:
+                current = item.get('current_mileage', 0)
                 interval = task.get('interval', 3000)
+                task['current_mileage'] = current
                 task['due_at_mileage'] = current + interval
             else:
                 interval = task.get('interval', 90)
@@ -319,6 +363,24 @@ def complete_task(task_id):
             
             break
     
+    save_tasks(tasks)
+
+def update_vehicle_mileage(item_id, new_mileage):
+    """Update mileage for a vehicle and all its mileage-based tasks."""
+    items = load_items()
+    tasks = load_tasks()
+    
+    for item in items:
+        if item['id'] == item_id:
+            item['current_mileage'] = new_mileage
+            item['mileage_updated_at'] = datetime.now().isoformat()
+            break
+    
+    for task in tasks:
+        if task['item_id'] == item_id and task.get('unit') == 'miles':
+            task['current_mileage'] = new_mileage
+    
+    save_items(items)
     save_tasks(tasks)
 
 def delete_item(item_id):
@@ -336,6 +398,8 @@ def delete_task(task_id):
 # ============================================
 if 'page' not in st.session_state:
     st.session_state.page = 'dashboard'
+if 'add_item_type' not in st.session_state:
+    st.session_state.add_item_type = 'vehicle'
 
 def navigate(page, **kwargs):
     st.session_state.page = page
@@ -363,7 +427,6 @@ with st.sidebar:
     
     st.markdown("---")
     
-    # ALWAYS show Add New Item button
     if st.button("+ Add New Item", use_container_width=True):
         navigate('add_item')
         st.rerun()
@@ -388,6 +451,7 @@ def show_dashboard():
     active_tasks = [t for t in tasks if t.get('is_active', True)]
     overdue = [t for t in active_tasks if is_overdue(t)]
     due_soon = [t for t in active_tasks if is_due_soon(t) and not is_overdue(t)]
+    vehicles = [i for i in items if i.get('type') == 'vehicle']
     
     # Stats
     col1, col2, col3, col4 = st.columns(4)
@@ -425,6 +489,31 @@ def show_dashboard():
         ''', unsafe_allow_html=True)
     
     st.markdown("<br>", unsafe_allow_html=True)
+    
+    # Quick Mileage Update for Vehicles
+    if vehicles:
+        st.markdown('<div class="section-header">Quick Mileage Update</div>', unsafe_allow_html=True)
+        for vehicle in vehicles:
+            col1, col2, col3 = st.columns([3, 2, 1])
+            with col1:
+                st.markdown(f"**{vehicle['name']}**")
+                current = vehicle.get('current_mileage', 0)
+                st.caption(f"Current: {current:,} miles")
+            with col2:
+                new_mileage = st.number_input(
+                    "New mileage",
+                    min_value=current,
+                    value=current,
+                    step=100,
+                    key=f"dash_mileage_{vehicle['id']}",
+                    label_visibility="collapsed"
+                )
+            with col3:
+                if st.button("Update", key=f"dash_update_{vehicle['id']}"):
+                    if new_mileage > current:
+                        update_vehicle_mileage(vehicle['id'], new_mileage)
+                        st.rerun()
+        st.markdown("<br>", unsafe_allow_html=True)
     
     # Overdue Tasks
     if overdue:
@@ -464,7 +553,7 @@ def show_dashboard():
                     st.rerun()
     
     if not overdue and not due_soon and items:
-        st.success("You're all caught up. No urgent maintenance tasks.")
+        st.success("You're all caught up! No urgent maintenance tasks.")
     
     if not items:
         st.markdown('''
@@ -485,7 +574,6 @@ def show_items():
     items = load_items()
     tasks = load_tasks()
     
-    # Add Item button at top
     col1, col2 = st.columns([3, 1])
     with col2:
         if st.button("+ Add Item", use_container_width=True):
@@ -506,20 +594,24 @@ def show_items():
     for item in items:
         item_tasks = [t for t in tasks if t['item_id'] == item['id'] and t.get('is_active', True)]
         overdue_count = len([t for t in item_tasks if is_overdue(t)])
+        item_type = item.get('type', 'other')
+        type_config = TYPE_CONFIG.get(item_type, TYPE_CONFIG['appliance'])
         
-        type_class = f"type-{item.get('type', 'other')}"
-        
-        with st.expander(f"**{item['name']}** — {item.get('brand', '')} {item.get('model', '')}".strip(), expanded=False):
+        with st.expander(f"{type_config['icon']} **{item['name']}** — {item.get('brand', '')} {item.get('model', '')}".strip(), expanded=False):
             col1, col2 = st.columns([3, 1])
             
             with col1:
-                st.markdown(f'<span class="type-badge {type_class}">{item.get("type", "other")}</span>', unsafe_allow_html=True)
+                st.markdown(f'<span class="type-badge type-{item_type}">{type_config["label"]}</span>', unsafe_allow_html=True)
                 if item.get('notes'):
                     st.caption(item['notes'])
                 
                 # Show current mileage for vehicles
-                if item.get('type') == 'vehicle' and item.get('current_mileage'):
-                    st.markdown(f"**Current Mileage:** {item['current_mileage']:,} miles")
+                if item_type == 'vehicle':
+                    current = item.get('current_mileage', 0)
+                    st.markdown(f"**Odometer:** {current:,} miles")
+                    if item.get('mileage_updated_at'):
+                        updated = datetime.fromisoformat(item['mileage_updated_at']).strftime('%b %d, %Y')
+                        st.caption(f"Last updated: {updated}")
             
             with col2:
                 st.markdown(f"**{len(item_tasks)}** tasks")
@@ -528,7 +620,7 @@ def show_items():
             
             st.markdown("---")
             
-            # Task list with edit capability
+            # Task list
             if item_tasks:
                 for task in sorted(item_tasks, key=lambda t: (not is_overdue(t), not is_due_soon(t))):
                     priority = task.get('priority', 'medium')
@@ -538,8 +630,7 @@ def show_items():
                     tcol1, tcol2, tcol3, tcol4 = st.columns([3, 2, 1, 1])
                     with tcol1:
                         st.markdown(f'<span class="priority-dot priority-{priority}"></span> **{task["name"]}**', unsafe_allow_html=True)
-                        unit_text = f"Every {interval:,} {unit}"
-                        st.caption(unit_text)
+                        st.caption(f"Every {interval:,} {unit}")
                     with tcol2:
                         status_class = "overdue" if is_overdue(task) else ("soon" if is_due_soon(task) else "ok")
                         st.markdown(f'<span class="status-{status_class}">{get_status_text(task)}</span>', unsafe_allow_html=True)
@@ -556,44 +647,76 @@ def show_items():
             
             st.markdown("<br>", unsafe_allow_html=True)
             
-            col1, col2, col3 = st.columns(3)
-            with col1:
-                if st.button("Add Task", key=f"add_task_{item['id']}", use_container_width=True):
-                    navigate('add_task', add_task_item_id=item['id'])
-                    st.rerun()
-            with col2:
-                if item.get('type') == 'vehicle':
+            # Action buttons - different for each type
+            if item_type == 'vehicle':
+                col1, col2, col3 = st.columns(3)
+                with col1:
+                    if st.button("Add Task", key=f"add_task_{item['id']}", use_container_width=True):
+                        navigate('add_task', add_task_item_id=item['id'])
+                        st.rerun()
+                with col2:
                     if st.button("Update Mileage", key=f"mileage_{item['id']}", use_container_width=True):
                         navigate('update_mileage', mileage_item_id=item['id'])
                         st.rerun()
-            with col3:
-                if st.button("Delete", key=f"del_{item['id']}", use_container_width=True):
-                    delete_item(item['id'])
-                    st.rerun()
+                with col3:
+                    if st.button("Delete", key=f"del_{item['id']}", use_container_width=True):
+                        delete_item(item['id'])
+                        st.rerun()
+            else:
+                col1, col2 = st.columns(2)
+                with col1:
+                    if st.button("Add Task", key=f"add_task_{item['id']}", use_container_width=True):
+                        navigate('add_task', add_task_item_id=item['id'])
+                        st.rerun()
+                with col2:
+                    if st.button("Delete", key=f"del_{item['id']}", use_container_width=True):
+                        delete_item(item['id'])
+                        st.rerun()
 
 def show_add_item():
     st.markdown('<div class="page-title">Add New Item</div>', unsafe_allow_html=True)
     st.markdown('<div class="page-subtitle">Track a new vehicle, home, or appliance</div>', unsafe_allow_html=True)
     
+    # Type selection OUTSIDE the form for dynamic updates
+    type_options = list(TYPE_CONFIG.keys())
+    type_labels = [f"{TYPE_CONFIG[t]['icon']} {TYPE_CONFIG[t]['label']}" for t in type_options]
+    
+    selected_idx = st.selectbox(
+        "What are you adding?",
+        range(len(type_options)),
+        format_func=lambda i: type_labels[i],
+        index=type_options.index(st.session_state.add_item_type)
+    )
+    item_type = type_options[selected_idx]
+    st.session_state.add_item_type = item_type
+    
+    config = TYPE_CONFIG[item_type]
+    
+    st.markdown("---")
+    
     with st.form("add_item_form"):
-        name = st.text_input("Name", placeholder="e.g., 2020 Honda Accord, Main House, Kitchen Refrigerator")
-        
-        item_type = st.selectbox("Type", ["vehicle", "home", "appliance"])
+        name = st.text_input(f"{config['label']} Name", placeholder=config['name_placeholder'])
         
         col1, col2 = st.columns(2)
         with col1:
-            brand = st.text_input("Brand (optional)", placeholder="e.g., Honda, Samsung, Carrier")
+            brand = st.text_input("Brand (optional)", placeholder=config['brand_placeholder'])
         with col2:
-            model = st.text_input("Model (optional)", placeholder="e.g., Accord, RF28R, XR15")
+            model = st.text_input("Model (optional)", placeholder=config['model_placeholder'])
         
-        # Vehicle-specific fields
-        current_mileage = None
-        if item_type == "vehicle":
+        # Type-specific fields
+        current_mileage = 0
+        if config['supports_mileage']:
             st.markdown("---")
-            st.markdown("**Vehicle Details**")
-            current_mileage = st.number_input("Current Mileage", min_value=0, value=0, step=100)
+            st.markdown("**Odometer Reading**")
+            current_mileage = st.number_input(
+                "Current mileage",
+                min_value=0,
+                value=0,
+                step=100,
+                help="Enter your current odometer reading. This helps track mileage-based maintenance."
+            )
         
-        notes = st.text_area("Notes (optional)", placeholder="Any additional details...")
+        notes = st.text_area("Notes (optional)", placeholder=config['notes_placeholder'])
         
         add_templates = st.checkbox("Add recommended maintenance schedule", value=True)
         
@@ -601,7 +724,7 @@ def show_add_item():
         
         if submitted:
             if not name:
-                st.error("Please enter a name for this item.")
+                st.error("Please enter a name.")
             else:
                 item_id = generate_id()
                 item = {
@@ -614,8 +737,9 @@ def show_add_item():
                     "created_at": datetime.now().isoformat()
                 }
                 
-                if item_type == "vehicle" and current_mileage:
+                if config['supports_mileage']:
                     item['current_mileage'] = current_mileage
+                    item['mileage_updated_at'] = datetime.now().isoformat()
                 
                 items = load_items()
                 items.append(item)
@@ -623,9 +747,8 @@ def show_add_item():
                 
                 # Add template tasks
                 if add_templates and item_type in TEMPLATES:
-                    tasks = load_tasks()
+                    tasks_list = load_tasks()
                     for template in TEMPLATES[item_type]:
-                        # Determine unit - for vehicles, prefer miles for applicable tasks
                         unit = template.get('unit', 'days')
                         interval = template.get('interval', 90)
                         
@@ -640,20 +763,14 @@ def show_add_item():
                             "created_at": datetime.now().isoformat()
                         }
                         
-                        # Set due date/mileage
-                        if unit == 'miles' and current_mileage:
+                        if unit == 'miles':
                             task['current_mileage'] = current_mileage
                             task['due_at_mileage'] = current_mileage + interval
                         else:
                             task['next_due_date'] = (datetime.now() + timedelta(days=interval)).isoformat()
                         
-                        # Store alt values for vehicles
-                        if template.get('alt_interval'):
-                            task['alt_interval'] = template['alt_interval']
-                            task['alt_unit'] = template['alt_unit']
-                        
-                        tasks.append(task)
-                    save_tasks(tasks)
+                        tasks_list.append(task)
+                    save_tasks(tasks_list)
                 
                 st.success(f"Added {name}!")
                 navigate('items')
@@ -675,24 +792,27 @@ def show_add_task():
             st.rerun()
         return
     
+    item_type = item.get('type', 'other')
+    type_config = TYPE_CONFIG.get(item_type, TYPE_CONFIG['appliance'])
+    
     st.markdown(f'<div class="page-title">Add Task</div>', unsafe_allow_html=True)
-    st.markdown(f'<div class="page-subtitle">Add maintenance task for {item["name"]}</div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="page-subtitle">New maintenance task for {item["name"]}</div>', unsafe_allow_html=True)
     
     with st.form("add_task_form"):
         name = st.text_input("Task Name", placeholder="e.g., Oil Change, Filter Replacement")
         
         col1, col2 = st.columns(2)
         with col1:
-            # Unit selection
-            if item.get('type') == 'vehicle':
-                unit = st.selectbox("Track by", ["days", "miles"])
+            # Only show miles option for vehicles
+            if type_config['supports_mileage']:
+                unit = st.selectbox("Track by", ["miles", "days"])
             else:
                 unit = "days"
                 st.text_input("Track by", value="Days", disabled=True)
         
         with col2:
             if unit == "miles":
-                interval = st.number_input("Interval (miles)", min_value=100, value=3000, step=500)
+                interval = st.number_input("Interval (miles)", min_value=100, value=5000, step=500)
             else:
                 interval = st.number_input("Interval (days)", min_value=1, value=90, step=1)
         
@@ -701,27 +821,25 @@ def show_add_task():
         st.markdown("---")
         st.markdown("**When was this last done?**")
         
-        col1, col2 = st.columns(2)
-        with col1:
-            last_completed_option = st.radio(
-                "Last completed",
-                ["Never / Not sure", "Enter date"],
-                horizontal=True
-            )
+        last_completed_option = st.radio(
+            "Last completed",
+            ["Not sure / Start tracking from now", "Enter specific date"],
+            horizontal=True
+        )
         
         last_date = None
         last_mileage = None
         
-        if last_completed_option == "Enter date":
-            with col2:
-                last_date = st.date_input("Last completed date", value=datetime.now().date())
+        if last_completed_option == "Enter specific date":
+            last_date = st.date_input("Date last completed", value=datetime.now().date())
         
         if unit == "miles":
             last_mileage = st.number_input(
-                "Mileage at last service (optional)",
+                "Mileage at last service",
                 min_value=0,
                 value=item.get('current_mileage', 0),
-                step=100
+                step=100,
+                help="What was your odometer reading when this was last done?"
             )
         
         submitted = st.form_submit_button("Add Task", use_container_width=True)
@@ -741,7 +859,6 @@ def show_add_task():
                     "created_at": datetime.now().isoformat()
                 }
                 
-                # Calculate next due
                 if unit == "miles":
                     current = item.get('current_mileage', 0)
                     if last_mileage and last_mileage > 0:
@@ -751,7 +868,7 @@ def show_add_task():
                         task['due_at_mileage'] = current + interval
                     task['current_mileage'] = current
                 else:
-                    if last_date and last_completed_option == "Enter date":
+                    if last_date and last_completed_option == "Enter specific date":
                         task['last_completed'] = datetime.combine(last_date, datetime.min.time()).isoformat()
                         task['next_due_date'] = (datetime.combine(last_date, datetime.min.time()) + timedelta(days=interval)).isoformat()
                     else:
@@ -783,9 +900,11 @@ def show_edit_task():
     
     items = load_items()
     item = next((i for i in items if i['id'] == task['item_id']), None)
+    item_type = item.get('type', 'other') if item else 'other'
+    type_config = TYPE_CONFIG.get(item_type, TYPE_CONFIG['appliance'])
     
     st.markdown(f'<div class="page-title">Edit Task</div>', unsafe_allow_html=True)
-    st.markdown(f'<div class="page-subtitle">Editing {task["name"]} for {item["name"] if item else "Unknown"}</div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="page-subtitle">{task["name"]} for {item["name"] if item else "Unknown"}</div>', unsafe_allow_html=True)
     
     with st.form("edit_task_form"):
         name = st.text_input("Task Name", value=task['name'])
@@ -793,8 +912,9 @@ def show_edit_task():
         col1, col2 = st.columns(2)
         with col1:
             current_unit = task.get('unit', 'days')
-            if item and item.get('type') == 'vehicle':
-                unit = st.selectbox("Track by", ["days", "miles"], index=0 if current_unit == "days" else 1)
+            if type_config['supports_mileage']:
+                unit_options = ["days", "miles"]
+                unit = st.selectbox("Track by", unit_options, index=unit_options.index(current_unit))
             else:
                 unit = "days"
                 st.text_input("Track by", value="Days", disabled=True)
@@ -811,9 +931,12 @@ def show_edit_task():
         priority = st.selectbox("Priority", priority_options, index=priority_options.index(current_priority))
         
         st.markdown("---")
-        st.markdown("**Update last completed**")
+        st.markdown("**Reset next due date/mileage?**")
         
-        update_last = st.checkbox("Update last completed date/mileage")
+        update_last = st.checkbox("Yes, update when this was last completed")
+        
+        last_date = None
+        last_mileage = None
         
         if update_last:
             col1, col2 = st.columns(2)
@@ -831,18 +954,17 @@ def show_edit_task():
         submitted = st.form_submit_button("Save Changes", use_container_width=True)
         
         if submitted:
-            # Update task
             task['name'] = name
             task['interval'] = interval
             task['unit'] = unit
             task['priority'] = priority
             
-            # Recalculate due date/mileage
             if update_last:
-                if unit == "miles" and item:
+                if unit == "miles" and item and last_mileage:
                     task['due_at_mileage'] = last_mileage + interval
                     task['last_completed_mileage'] = last_mileage
                     task['current_mileage'] = item.get('current_mileage', 0)
+                    task['last_completed'] = datetime.combine(last_date, datetime.min.time()).isoformat()
                 else:
                     task['last_completed'] = datetime.combine(last_date, datetime.min.time()).isoformat()
                     task['next_due_date'] = (datetime.combine(last_date, datetime.min.time()) + timedelta(days=interval)).isoformat()
@@ -887,28 +1009,34 @@ def show_update_mileage():
     st.markdown(f'<div class="page-subtitle">{item["name"]}</div>', unsafe_allow_html=True)
     
     current = item.get('current_mileage', 0)
-    st.markdown(f"**Current mileage:** {current:,} miles")
+    
+    st.markdown(f"**Current odometer:** {current:,} miles")
+    if item.get('mileage_updated_at'):
+        updated = datetime.fromisoformat(item['mileage_updated_at']).strftime('%B %d, %Y')
+        st.caption(f"Last updated: {updated}")
+    
+    st.markdown("<br>", unsafe_allow_html=True)
     
     with st.form("mileage_form"):
-        new_mileage = st.number_input("New Mileage", min_value=current, value=current, step=100)
+        new_mileage = st.number_input(
+            "New odometer reading",
+            min_value=current,
+            value=current,
+            step=100,
+            help="Enter your current odometer reading"
+        )
         
-        submitted = st.form_submit_button("Update", use_container_width=True)
+        submitted = st.form_submit_button("Update Mileage", use_container_width=True)
         
         if submitted:
-            # Update item mileage
-            item['current_mileage'] = new_mileage
-            save_items(items)
-            
-            # Update all mileage-based tasks for this item
-            tasks = load_tasks()
-            for task in tasks:
-                if task['item_id'] == item_id and task.get('unit') == 'miles':
-                    task['current_mileage'] = new_mileage
-            save_tasks(tasks)
-            
-            st.success(f"Mileage updated to {new_mileage:,} miles!")
-            navigate('items')
-            st.rerun()
+            if new_mileage > current:
+                update_vehicle_mileage(item_id, new_mileage)
+                miles_driven = new_mileage - current
+                st.success(f"Updated! You've driven {miles_driven:,} miles since last update.")
+                navigate('items')
+                st.rerun()
+            else:
+                st.warning("New mileage must be higher than current reading.")
     
     if st.button("Cancel"):
         navigate('items')
@@ -938,8 +1066,11 @@ def show_tasks():
     else:
         filtered = active
     
-    # Sort: overdue first, then due soon, then by date
     filtered = sorted(filtered, key=lambda t: (not is_overdue(t), not is_due_soon(t), t.get('next_due_date', '9999')))
+    
+    if not filtered:
+        st.info("No tasks match this filter.")
+        return
     
     for task in filtered:
         item = next((i for i in items if i['id'] == task['item_id']), None)
@@ -979,7 +1110,7 @@ def show_settings():
     with col2:
         st.metric("Tasks", len(tasks))
     with col3:
-        st.metric("Completed", len(logs))
+        st.metric("Completions", len(logs))
     
     st.markdown("---")
     st.markdown("#### Export Data")
