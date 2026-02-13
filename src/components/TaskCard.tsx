@@ -1,23 +1,26 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Card } from './Card';
 import { MaintenanceTask, Item } from '../context/types';
 import { colors } from '../theme/colors';
 import { PRIORITY_COLORS } from '../utils/constants';
 import { formatDate, isOverdue, getDaysUntilDue } from '../utils/dates';
+import { addDays } from 'date-fns';
 
 interface TaskCardProps {
   task: MaintenanceTask;
   item?: Item;
   onPress: () => void;
   onComplete?: () => void;
+  onDefer?: (days: number) => void;
 }
 
-export const TaskCard: React.FC<TaskCardProps> = ({ task, item, onPress, onComplete }) => {
+export const TaskCard: React.FC<TaskCardProps> = ({ task, item, onPress, onComplete, onDefer }) => {
   const isTaskOverdue = isOverdue(task.nextDue);
   const daysUntil = getDaysUntilDue(task.nextDue);
   const priorityColor = PRIORITY_COLORS[task.priority];
+  const [showActions, setShowActions] = useState(false);
 
   const getDueText = () => {
     if (daysUntil < 0) return `${Math.abs(daysUntil)} days overdue`;
@@ -26,8 +29,24 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, item, onPress, onCompl
     return `Due in ${daysUntil} days`;
   };
 
+  const handleLongPress = () => {
+    if (!onDefer) return;
+    
+    Alert.alert(
+      'Defer Task',
+      `Push "${task.name}" to a later date?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: '1 day', onPress: () => onDefer(1) },
+        { text: '3 days', onPress: () => onDefer(3) },
+        { text: '1 week', onPress: () => onDefer(7) },
+        { text: '2 weeks', onPress: () => onDefer(14) },
+      ]
+    );
+  };
+
   return (
-    <Card onPress={onPress}>
+    <Card onPress={onPress} onLongPress={handleLongPress}>
       <View style={styles.row}>
         <View style={[styles.priorityBar, { backgroundColor: priorityColor }]} />
         <View style={styles.content}>

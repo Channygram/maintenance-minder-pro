@@ -5,6 +5,7 @@ import { colors } from '../theme/colors';
 interface CardProps {
   children: React.ReactNode;
   onPress?: () => void;
+  onLongPress?: () => void;
   style?: ViewStyle;
   variant?: 'default' | 'elevated' | 'outlined';
 }
@@ -12,6 +13,7 @@ interface CardProps {
 export const Card: React.FC<CardProps> = ({
   children,
   onPress,
+  onLongPress,
   style,
   variant = 'default',
 }) => {
@@ -35,10 +37,11 @@ export const Card: React.FC<CardProps> = ({
     }
   };
 
-  if (onPress) {
+  if (onPress || onLongPress) {
     return (
       <Pressable
         onPress={onPress}
+        onLongPress={onLongPress}
         style={({ pressed }) => [
           styles.card,
           getCardStyle(),

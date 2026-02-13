@@ -4,6 +4,7 @@ import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { Card, TaskCard, FAB, EmptyState } from '../../components';
 import { useApp } from '../../context/AppContext';
+import { addDays } from 'date-fns';
 import { colors } from '../../theme/colors';
 import { commonStyles } from '../../theme/styles';
 import { getGreeting } from '../../utils/helpers';
@@ -12,7 +13,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export const DashboardScreen: React.FC = () => {
   const navigation = useNavigation<any>();
-  const { state } = useApp();
+  const { state, updateTask } = useApp();
   const insets = useSafeAreaInsets();
   const [refreshing, setRefreshing] = React.useState(false);
 
@@ -39,6 +40,14 @@ export const DashboardScreen: React.FC = () => {
 
   const handleCompleteTask = (taskId: string) => {
     navigation.navigate('CompleteTask', { taskId });
+  };
+
+  const handleDeferTask = async (taskId: string, days: number) => {
+    const task = state.tasks.find(t => t.id === taskId);
+    if (task) {
+      const newDueDate = addDays(new Date(), days);
+      await updateTask({ ...task, nextDue: newDueDate.toISOString() });
+    }
   };
 
   if (state.items.length === 0) {
@@ -95,6 +104,7 @@ export const DashboardScreen: React.FC = () => {
                 item={getItemForTask(task.id)}
                 onPress={() => handleTaskPress(task.id)}
                 onComplete={() => handleCompleteTask(task.id)}
+                onDefer={(days) => handleDeferTask(task.id, days)}
               />
             ))}
           </View>
@@ -111,6 +121,7 @@ export const DashboardScreen: React.FC = () => {
                 item={getItemForTask(task.id)}
                 onPress={() => handleTaskPress(task.id)}
                 onComplete={() => handleCompleteTask(task.id)}
+                onDefer={(days) => handleDeferTask(task.id, days)}
               />
             ))}
           </View>
@@ -125,7 +136,15 @@ export const DashboardScreen: React.FC = () => {
         )}
       </ScrollView>
 
-      <FAB icon="add" onPress={() => navigation.navigate('AddItem')} />
+      <View style={styles.fabContainer}>
+        <FAB 
+          icon="flash" 
+          onPress={() => navigation.navigate('QuickAdd')} 
+          style={styles.fabSecondary}
+          size="small"
+        />
+        <FAB icon="add" onPress={() => navigation.navigate('AddItem')} />
+      </View>
     </View>
   );
 };
@@ -172,6 +191,17 @@ const styles = StyleSheet.create({
   allGoodCard: {
     alignItems: 'center',
     paddingVertical: 40,
+  },
+  fabContainer: {
+    position: 'absolute',
+    bottom: 24,
+    right: 24,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  fabSecondary: {
+    backgroundColor: colors.secondary,
   },
   allGoodTitle: {
     color: colors.text,

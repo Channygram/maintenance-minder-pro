@@ -14,9 +14,9 @@ export const STORAGE_KEYS = {
 export const ITEM_TYPES = ['car', 'home', 'appliance', 'other'] as const;
 
 export const ITEM_SUBTYPES: Record<string, string[]> = {
-  car: ['Sedan', 'SUV', 'Truck', 'Van', 'Motorcycle', 'Other'],
-  home: ['House', 'Apartment', 'Condo', 'Townhouse', 'Other'],
-  appliance: ['Kitchen', 'Laundry', 'HVAC', 'Water', 'Other'],
+  car: ['Sedan', 'SUV', 'Truck', 'Van', 'Motorcycle', 'Sports Car', 'Electric', 'Hybrid', 'Other'],
+  home: ['House', 'Apartment', 'Condo', 'Townhouse', 'Mobile Home', 'Garage', 'Other'],
+  appliance: ['Refrigerator', 'Dishwasher', 'Washing Machine', 'Dryer', 'Oven/Range', 'Microwave', 'HVAC', 'Water Heater', 'Garage Door', 'Pool Equipment', 'Other'],
   other: ['Other'],
 };
 

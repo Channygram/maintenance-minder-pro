@@ -9,6 +9,7 @@ interface FABProps {
   style?: ViewStyle;
   color?: string;
   backgroundColor?: string;
+  size?: 'small' | 'medium' | 'large';
 }
 
 export const FAB: React.FC<FABProps> = ({
@@ -17,14 +18,37 @@ export const FAB: React.FC<FABProps> = ({
   style,
   color = colors.white,
   backgroundColor = colors.primary,
+  size = 'medium',
 }) => {
+  const getSize = () => {
+    switch (size) {
+      case 'small':
+        return { width: 44, height: 44, radius: 22, iconSize: 20 };
+      case 'large':
+        return { width: 64, height: 64, radius: 32, iconSize: 32 };
+      default:
+        return { width: 56, height: 56, radius: 28, iconSize: 24 };
+    }
+  };
+
+  const sizeConfig = getSize();
+
   return (
     <TouchableOpacity
       onPress={onPress}
-      style={[styles.fab, { backgroundColor }, style]}
+      style={[
+        styles.fab, 
+        { 
+          backgroundColor,
+          width: sizeConfig.width,
+          height: sizeConfig.height,
+          borderRadius: sizeConfig.radius,
+        }, 
+        style
+      ]}
       activeOpacity={0.8}
     >
-      <Ionicons name={icon} size={28} color={color} />
+      <Ionicons name={icon} size={sizeConfig.iconSize} color={color} />
     </TouchableOpacity>
   );
 };

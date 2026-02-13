@@ -97,13 +97,35 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         storage.getOnboardingComplete(),
       ]);
       
+      // Validate data integrity
+      const validItems = Array.isArray(items) ? items : [];
+      const validTasks = Array.isArray(tasks) ? tasks : [];
+      const validLogs = Array.isArray(logs) ? logs : [];
+      const validSettings = settings || DEFAULT_SETTINGS;
+      
       dispatch({
         type: 'LOAD_ALL_DATA',
-        payload: { items, tasks, logs, settings, onboardingComplete },
+        payload: { 
+          items: validItems, 
+          tasks: validTasks, 
+          logs: validLogs, 
+          settings: validSettings, 
+          onboardingComplete: !!onboardingComplete 
+        },
       });
     } catch (error) {
       console.error('Failed to load data:', error);
-      dispatch({ type: 'SET_LOADING', payload: false });
+      // Reset to defaults on error
+      dispatch({
+        type: 'LOAD_ALL_DATA',
+        payload: { 
+          items: [], 
+          tasks: [], 
+          logs: [], 
+          settings: DEFAULT_SETTINGS, 
+          onboardingComplete: false 
+        },
+      });
     }
   };
 

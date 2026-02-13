@@ -11,8 +11,13 @@ import { ItemDetailScreen } from '../screens/items/ItemDetailScreen';
 import { AddEditItemScreen } from '../screens/items/AddEditItemScreen';
 import { AddEditTaskScreen } from '../screens/tasks/AddEditTaskScreen';
 import { CompleteTaskScreen } from '../screens/tasks/CompleteTaskScreen';
+import { TasksScreen } from '../screens/tasks/TasksScreen';
 import { CalendarScreen } from '../screens/calendar/CalendarScreen';
 import { SettingsScreen } from '../screens/settings/SettingsScreen';
+import { StatsScreen } from '../screens/stats/StatsScreen';
+import { QuickAddScreen } from '../screens/quickadd/QuickAddScreen';
+import { ProvidersScreen } from '../screens/providers/ProvidersScreen';
+import { NotificationsCenterScreen } from '../screens/notifications/NotificationsCenterScreen';
 
 const Tab = createBottomTabNavigator();
 const DashboardStack = createNativeStackNavigator();
@@ -21,12 +26,16 @@ const ItemsStack = createNativeStackNavigator();
 const DashboardStackNavigator = () => (
   <DashboardStack.Navigator screenOptions={{ headerShown: false }}>
     <DashboardStack.Screen name="Dashboard" component={DashboardScreen} />
+    <DashboardStack.Screen name="QuickAdd" component={QuickAddScreen} />
+    <DashboardStack.Screen name="Providers" component={ProvidersScreen} />
+    <DashboardStack.Screen name="NotificationsCenter" component={NotificationsCenterScreen} />
     <DashboardStack.Screen name="ItemDetail" component={ItemDetailScreen} />
     <DashboardStack.Screen name="AddItem" component={AddEditItemScreen} />
     <DashboardStack.Screen name="EditItem" component={AddEditItemScreen} />
     <DashboardStack.Screen name="AddTask" component={AddEditTaskScreen} />
     <DashboardStack.Screen name="EditTask" component={AddEditTaskScreen} />
     <DashboardStack.Screen name="CompleteTask" component={CompleteTaskScreen} />
+    <DashboardStack.Screen name="TasksList" component={TasksScreen} />
   </DashboardStack.Navigator>
 );
 
@@ -103,6 +112,11 @@ export const TabNavigator: React.FC = () => {
         name="SettingsTab"
         component={SettingsScreen}
         options={{ tabBarLabel: 'Settings' }}
+      />
+      <Tab.Screen
+        name="StatsTab"
+        component={StatsScreen}
+        options={{ tabBarLabel: 'Stats', tabBarIcon: ({ focused, color }) => <Ionicons name={focused ? 'stats-chart' : 'stats-chart-outline'} size={24} color={color} /> }}
       />
     </Tab.Navigator>
   );

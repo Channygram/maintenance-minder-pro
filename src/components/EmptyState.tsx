@@ -10,7 +10,15 @@ interface EmptyStateProps {
   message: string;
   actionLabel?: string;
   onAction?: () => void;
+  variant?: 'default' | 'success' | 'warning' | 'danger';
 }
+
+const variantColors = {
+  default: colors.primary,
+  success: colors.secondary,
+  warning: colors.warning,
+  danger: colors.danger,
+};
 
 export const EmptyState: React.FC<EmptyStateProps> = ({
   icon,
@@ -18,16 +26,23 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
   message,
   actionLabel,
   onAction,
+  variant = 'default',
 }) => {
+  const iconColor = variantColors[variant];
+
   return (
     <View style={styles.container}>
-      <View style={styles.iconContainer}>
-        <Ionicons name={icon} size={48} color={colors.textMuted} />
+      <View style={[styles.iconContainer, { backgroundColor: iconColor + '15' }]}>
+        <Ionicons name={icon} size={48} color={iconColor} />
       </View>
       <Text style={styles.title}>{title}</Text>
       <Text style={styles.message}>{message}</Text>
       {actionLabel && onAction && (
-        <Button title={actionLabel} onPress={onAction} style={styles.button} />
+        <Button 
+          title={actionLabel} 
+          onPress={onAction} 
+          style={styles.button}
+        />
       )}
     </View>
   );
@@ -44,7 +59,6 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: colors.surface,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 24,

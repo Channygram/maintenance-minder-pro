@@ -65,3 +65,27 @@ export const clearAllData = async (): Promise<void> => {
     STORAGE_KEYS.ONBOARDING_COMPLETE,
   ]);
 };
+
+export const importAllData = async (jsonString: string): Promise<boolean> => {
+  try {
+    const data = JSON.parse(jsonString);
+    
+    if (data.items) {
+      await saveItems(data.items);
+    }
+    if (data.tasks) {
+      await saveTasks(data.tasks);
+    }
+    if (data.logs) {
+      await saveLogs(data.logs);
+    }
+    if (data.settings) {
+      await saveSettings(data.settings);
+    }
+    
+    return true;
+  } catch (error) {
+    console.error('Import failed:', error);
+    return false;
+  }
+};

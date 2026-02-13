@@ -7,7 +7,7 @@ import { useApp } from '../../context/AppContext';
 import { colors } from '../../theme/colors';
 import { commonStyles } from '../../theme/styles';
 import { generateId } from '../../utils/helpers';
-import { addDays } from 'date-fns';
+import { addDays, parseISO } from 'date-fns';
 import { MaintenanceLog } from '../../context/types';
 
 export const CompleteTaskScreen: React.FC = () => {
@@ -33,6 +33,18 @@ export const CompleteTaskScreen: React.FC = () => {
   }
 
   const handleComplete = async () => {
+    // Validate cost if provided
+    if (cost && isNaN(parseFloat(cost))) {
+      Alert.alert('Invalid Cost', 'Please enter a valid number for the cost');
+      return;
+    }
+
+    const costValue = cost ? parseFloat(cost) : 0;
+    if (costValue < 0) {
+      Alert.alert('Invalid Cost', 'Cost cannot be negative');
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -44,29 +56,41 @@ export const CompleteTaskScreen: React.FC = () => {
         taskId: task.id,
         itemId: task.itemId,
         completedAt: now.toISOString(),
-        cost: cost ? parseFloat(cost) : undefined,
+        cost: costValue > 0 ? costValue : undefined,
         provider: provider.trim() || undefined,
         notes: notes.trim() || undefined,
       };
 
       await addLog(log);
 
+      // Determine next due date
+      let nextDueDate: Date;
+      if (task.intervalDays > 0) {
+        nextDueDate = addDays(now, task.intervalDays);
+      } else {
+        // One-time task - keep the same due date or mark inactive
+        nextDueDate = parseISO(task.nextDue);
+      }
+
       // Update task with new due date
       const updatedTask = {
         ...task,
         lastCompleted: now.toISOString(),
-        nextDue: task.intervalDays > 0 
-          ? addDays(now, task.intervalDays).toISOString()
-          : task.nextDue,
+        nextDue: nextDueDate.toISOString(),
       };
 
       await updateTask(updatedTask);
 
-      Alert.alert('Success', 'Task marked as complete!', [
-        { text: 'OK', onPress: () => navigation.goBack() },
-      ]);
+      // Show success with details
+      const costText = costValue > 0 ? `$${costValue.toFixed(2)}` : 'free';
+      Alert.alert(
+        '✅ Task Completed!', 
+        `${task.name} marked as complete.\n\nCost: ${costText}${provider.trim() ? `\nProvider: ${provider.trim()}` : ''}`,
+        [{ text: 'OK', onPress: () => navigation.goBack() }]
+      );
     } catch (error) {
-      Alert.alert('Error', 'Failed to complete task');
+      console.error('Complete task error:', error);
+      Alert.alert('Error', 'Failed to complete task. Please try again.');
     } finally {
       setLoading(false);
     }

@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Alert, Share, Linking } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Alert, Share, Linking, Modal } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { Card, Button } from '../../components';
+import { Card, Button, Input } from '../../components';
 import { useApp } from '../../context/AppContext';
 import { colors } from '../../theme/colors';
 import { commonStyles } from '../../theme/styles';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { exportAllData, clearAllData } from '../../services/storage';
+import { exportAllData, clearAllData, importAllData } from '../../services/storage';
 import { APP_NAME, APP_VERSION, REMINDER_OPTIONS } from '../../utils/constants';
 
 export const SettingsScreen: React.FC = () => {
@@ -15,6 +15,9 @@ export const SettingsScreen: React.FC = () => {
   const { state, updateSettings } = useApp();
   const insets = useSafeAreaInsets();
   const [exporting, setExporting] = useState(false);
+  const [showReminderPicker, setShowReminderPicker] = useState(false);
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [importText, setImportText] = useState('');
 
   const handleToggleNotifications = async () => {
     await updateSettings({
@@ -22,6 +25,16 @@ export const SettingsScreen: React.FC = () => {
       notificationsEnabled: !state.settings.notificationsEnabled,
     });
   };
+
+  const handleSetDefaultReminder = async (days: number) => {
+    await updateSettings({
+      ...state.settings,
+      defaultReminderDays: days,
+    });
+    setShowReminderPicker(false);
+  };
+
+  const currentReminderLabel = REMINDER_OPTIONS.find(r => r.value === state.settings.defaultReminderDays)?.label || '3 days before';
 
   const handleExportData = async () => {
     setExporting(true);
@@ -35,6 +48,23 @@ export const SettingsScreen: React.FC = () => {
       Alert.alert('Error', 'Failed to export data');
     } finally {
       setExporting(false);
+    }
+  };
+
+  const handleImportData = () => {
+    setShowImportModal(true);
+  };
+
+  const handleConfirmImport = async () => {
+    if (importText.trim()) {
+      const success = await importAllData(importText);
+      setShowImportModal(false);
+      setImportText('');
+      if (success) {
+        Alert.alert('Success', 'Data imported successfully. Please restart the app.');
+      } else {
+        Alert.alert('Error', 'Failed to import data. Please check the JSON format.');
+      }
     }
   };
 
@@ -117,7 +147,47 @@ export const SettingsScreen: React.FC = () => {
               <Toggle value={state.settings.notificationsEnabled} onToggle={handleToggleNotifications} />
             }
           />
+          <View style={styles.divider} />
+          <SettingRow
+            icon="time-outline"
+            title="Default Reminder"
+            subtitle={currentReminderLabel}
+            onPress={() => setShowReminderPicker(true)}
+          />
         </Card>
+
+        {/* Reminder Picker Modal */}
+        <Modal visible={showReminderPicker} transparent animationType="slide">
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              <Text style={styles.modalTitle}>Default Reminder Time</Text>
+              <Text style={styles.modalSubtitle}>New tasks will use this reminder setting</Text>
+              {REMINDER_OPTIONS.map((option) => (
+                <TouchableOpacity
+                  key={option.value}
+                  style={[
+                    styles.reminderOption,
+                    state.settings.defaultReminderDays === option.value && styles.reminderOptionActive,
+                  ]}
+                  onPress={() => handleSetDefaultReminder(option.value)}
+                >
+                  <Text
+                    style={[
+                      styles.reminderOptionText,
+                      state.settings.defaultReminderDays === option.value && styles.reminderOptionTextActive,
+                    ]}
+                  >
+                    {option.label}
+                  </Text>
+                  {state.settings.defaultReminderDays === option.value && (
+                    <Ionicons name="checkmark" size={20} color={colors.white} />
+                  )}
+                </TouchableOpacity>
+              ))}
+              <Button title="Cancel" variant="outline" onPress={() => setShowReminderPicker(false)} style={{ marginTop: 16 }} />
+            </View>
+          </View>
+        </Modal>
 
         {/* Data Section */}
         <Text style={styles.sectionTitle}>Data</Text>
@@ -130,6 +200,13 @@ export const SettingsScreen: React.FC = () => {
           />
           <View style={styles.divider} />
           <SettingRow
+            icon="cloud-upload-outline"
+            title="Import Data"
+            subtitle="Restore from JSON backup"
+            onPress={handleImportData}
+          />
+          <View style={styles.divider} />
+          <SettingRow
             icon="trash-outline"
             title="Clear All Data"
             subtitle="Delete all items and tasks"
@@ -137,6 +214,28 @@ export const SettingsScreen: React.FC = () => {
             danger
           />
         </Card>
+
+        {/* Import Modal */}
+        <Modal visible={showImportModal} transparent animationType="slide">
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              <Text style={styles.modalTitle}>Import Data</Text>
+              <Text style={styles.modalSubtitle}>Paste your exported JSON below. This will replace all existing data.</Text>
+              <Input
+                value={importText}
+                onChangeText={setImportText}
+                placeholder="Paste JSON here..."
+                multiline
+                numberOfLines={6}
+                style={{ minHeight: 120, textAlignVertical: 'top' }}
+              />
+              <View style={styles.modalButtons}>
+                <Button title="Cancel" variant="outline" onPress={() => { setShowImportModal(false); setImportText(''); }} style={{ flex: 1, marginRight: 8 }} />
+                <Button title="Import" onPress={handleConfirmImport} style={{ flex: 1, marginLeft: 8 }} disabled={!importText.trim()} />
+              </View>
+            </View>
+          </View>
+        </Modal>
 
         {/* About Section */}
         <Text style={styles.sectionTitle}>About</Text>
@@ -254,5 +353,54 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     fontSize: 14,
     marginTop: 4,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: colors.surface,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: 24,
+    paddingBottom: 40,
+  },
+  modalTitle: {
+    color: colors.text,
+    fontSize: 20,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  modalSubtitle: {
+    color: colors.textMuted,
+    fontSize: 14,
+    textAlign: 'center',
+    marginTop: 8,
+    marginBottom: 24,
+  },
+  reminderOption: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: colors.background,
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 8,
+  },
+  reminderOptionActive: {
+    backgroundColor: colors.primary,
+  },
+  reminderOptionText: {
+    color: colors.text,
+    fontSize: 16,
+  },
+  reminderOptionTextActive: {
+    color: colors.white,
+    fontWeight: '600',
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    marginTop: 16,
   },
 });
