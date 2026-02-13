@@ -21,6 +21,7 @@ import { ProvidersScreen } from '../screens/providers/ProvidersScreen';
 import { WarrantyTrackerScreen } from '../screens/warranty/WarrantyTrackerScreen';
 import { TipsScreen } from '../screens/tips/TipsScreen';
 import { UpcomingScreen } from '../screens/upcoming/UpcomingScreen';
+import { HistoryScreen } from '../screens/history/HistoryScreen';
 import { NotificationsCenterScreen } from '../screens/notifications/NotificationsCenterScreen';
 
 const Tab = createBottomTabNavigator();
@@ -37,6 +38,7 @@ const DashboardStackNavigator = () => (
     <DashboardStack.Screen name="WarrantyTracker" component={WarrantyTrackerScreen} />
     <DashboardStack.Screen name="Tips" component={TipsScreen} />
     <DashboardStack.Screen name="Upcoming" component={UpcomingScreen} />
+    <DashboardStack.Screen name="History" component={HistoryScreen} />
     <DashboardStack.Screen name="ItemDetail" component={ItemDetailScreen} />
     <DashboardStack.Screen name="AddItem" component={AddEditItemScreen} />
     <DashboardStack.Screen name="EditItem" component={AddEditItemScreen} />
