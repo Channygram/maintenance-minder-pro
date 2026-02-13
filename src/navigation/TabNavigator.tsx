@@ -6,6 +6,7 @@ import { colors } from '../theme/colors';
 
 // Screens
 import { DashboardScreen } from '../screens/dashboard/DashboardScreen';
+import { DashboardWidgetsScreen } from '../screens/dashboard/DashboardWidgetsScreen';
 import { ItemsListScreen } from '../screens/items/ItemsListScreen';
 import { ItemDetailScreen } from '../screens/items/ItemDetailScreen';
 import { AddEditItemScreen } from '../screens/items/AddEditItemScreen';
@@ -14,6 +15,7 @@ import { CompleteTaskScreen } from '../screens/tasks/CompleteTaskScreen';
 import { TasksScreen } from '../screens/tasks/TasksScreen';
 import { CalendarScreen } from '../screens/calendar/CalendarScreen';
 import { SettingsScreen } from '../screens/settings/SettingsScreen';
+import { ReminderSettingsScreen } from '../screens/settings/ReminderSettingsScreen';
 import { StatsScreen } from '../screens/stats/StatsScreen';
 import { YearInReviewScreen } from '../screens/stats/YearInReviewScreen';
 import { QuickAddScreen } from '../screens/quickadd/QuickAddScreen';
@@ -31,7 +33,8 @@ const ItemsStack = createNativeStackNavigator();
 
 const DashboardStackNavigator = () => (
   <DashboardStack.Navigator screenOptions={{ headerShown: false }}>
-    <DashboardStack.Screen name="Dashboard" component={DashboardScreen} />
+    <DashboardStack.Screen name="DashboardMain" component={DashboardScreen} />
+    <DashboardStack.Screen name="DashboardWidgets" component={DashboardWidgetsScreen} />
     <DashboardStack.Screen name="QuickAdd" component={QuickAddScreen} />
     <DashboardStack.Screen name="Providers" component={ProvidersScreen} />
     <DashboardStack.Screen name="NotificationsCenter" component={NotificationsCenterScreen} />
@@ -48,6 +51,7 @@ const DashboardStackNavigator = () => (
     <DashboardStack.Screen name="EditTask" component={AddEditTaskScreen} />
     <DashboardStack.Screen name="CompleteTask" component={CompleteTaskScreen} />
     <DashboardStack.Screen name="TasksList" component={TasksScreen} />
+    <DashboardStack.Screen name="ReminderSettings" component={ReminderSettingsScreen} />
   </DashboardStack.Navigator>
 );
 
