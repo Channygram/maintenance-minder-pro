@@ -19,6 +19,7 @@ import { YearInReviewScreen } from '../screens/stats/YearInReviewScreen';
 import { QuickAddScreen } from '../screens/quickadd/QuickAddScreen';
 import { ProvidersScreen } from '../screens/providers/ProvidersScreen';
 import { WarrantyTrackerScreen } from '../screens/warranty/WarrantyTrackerScreen';
+import { TipsScreen } from '../screens/tips/TipsScreen';
 import { NotificationsCenterScreen } from '../screens/notifications/NotificationsCenterScreen';
 
 const Tab = createBottomTabNavigator();
@@ -33,6 +34,7 @@ const DashboardStackNavigator = () => (
     <DashboardStack.Screen name="NotificationsCenter" component={NotificationsCenterScreen} />
     <DashboardStack.Screen name="YearInReview" component={YearInReviewScreen} />
     <DashboardStack.Screen name="WarrantyTracker" component={WarrantyTrackerScreen} />
+    <DashboardStack.Screen name="Tips" component={TipsScreen} />
     <DashboardStack.Screen name="ItemDetail" component={ItemDetailScreen} />
     <DashboardStack.Screen name="AddItem" component={AddEditItemScreen} />
     <DashboardStack.Screen name="EditItem" component={AddEditItemScreen} />
